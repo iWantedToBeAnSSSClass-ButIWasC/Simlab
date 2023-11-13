@@ -7,16 +7,38 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.Manifest
+import android.content.Context
+import android.database.Cursor
+import android.provider.MediaStore
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.sss.simplab.databinding.ActivityMainBinding
+import com.sss.simplab.network.Perfume
+import com.sss.simplab.network.RecommendPerfumeService
+import okhttp3.MediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.create
+import retrofit2.http.Part
+import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        const val INTENT_NAME_PERFUME = "perfume"
+    }
+
     private lateinit var binding: ActivityMainBinding
+
+    private var imageFile: MultipartBody.Part? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,7 +54,35 @@ class MainActivity : AppCompatActivity() {
     private fun initButton() {
         // '추천 받기' 버튼 클릭 시 화면 전환
         binding.btnRecommend.setOnClickListener {
-            startActivity(Intent(this@MainActivity, RecommendResultActivity::class.java))
+            imageFile?.let {
+                val retrofit = Retrofit
+                    .Builder()
+                    .baseUrl("http://localhost:5000")
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val service = retrofit.create(RecommendPerfumeService::class.java)
+
+                service.recommend(imageFile!!).enqueue(object : Callback<Perfume> {
+                    override fun onResponse(
+                        call: Call<Perfume>,
+                        response: Response<Perfume>
+                    ) {
+                        if (!response.isSuccessful) {
+                            // 실패
+                        }
+
+                        val perfume = response.body()
+                        val intent = Intent(this@MainActivity, RecommendResultActivity::class.java)
+                        intent.putExtra(INTENT_NAME_PERFUME, perfume)
+                        startActivity(intent)
+                    }
+
+                    override fun onFailure(call: Call<Perfume>, t: Throwable) {
+
+                    }
+                })
+            }
         }
     }
 
@@ -86,6 +136,10 @@ class MainActivity : AppCompatActivity() {
     private val getImageFromGallery =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
             uri?.let {
+                val file = File(absolutelyPath(uri, this))
+                val requestFile = RequestBody.create(MediaType.parse("image/*"), file)
+                imageFile = MultipartBody.Part.createFormData("profile", file.name, requestFile)
+
                 // 이미지 uri 정보를 ImageView 에 반영
                 binding.uploadImageView.setImageURI(it)
 
@@ -122,5 +176,17 @@ class MainActivity : AppCompatActivity() {
                 startActivity(intent)
             }
         }
+    }
+
+    // 절대경로 변환
+    fun absolutelyPath(path: Uri?, context : Context): String {
+        var proj: Array<String> = arrayOf(MediaStore.Images.Media.DATA)
+        var c: Cursor? = context.contentResolver.query(path!!, proj, null, null, null)
+        var index = c?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+        c?.moveToFirst()
+
+        var result = c?.getString(index!!)
+
+        return result!!
     }
 }
