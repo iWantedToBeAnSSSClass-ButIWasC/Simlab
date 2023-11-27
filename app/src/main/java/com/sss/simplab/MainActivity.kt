@@ -12,6 +12,7 @@ import android.database.Cursor
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -51,12 +52,23 @@ class MainActivity : AppCompatActivity() {
         initImageView()
     }
 
+    override fun onResume() {
+        super.onResume()
+
+        binding.indicator.visibility = View.GONE
+        binding.layout.visibility = View.VISIBLE
+    }
+
     private fun initButton() {
         // '추천 받기' 버튼 클릭 시 화면 전환
         binding.btnRecommend.setOnClickListener {
-            imageFile?.let {
+            if (imageFile == null) {
+                 Toast.makeText(this@MainActivity, "이미지를 업로드해주세요.", Toast.LENGTH_SHORT).show()
+            } else {
+                binding.indicator.visibility = View.VISIBLE
+                binding.layout.visibility = View.GONE
 
-                val gson= GsonBuilder().setLenient().create()
+                val gson = GsonBuilder().setLenient().create()
 
                 val retrofit = Retrofit
                     .Builder()
@@ -147,9 +159,6 @@ class MainActivity : AppCompatActivity() {
 
                 // 이미지 uri 정보를 ImageView 에 반영
                 binding.uploadImageView.setImageURI(it)
-
-                // '추천 받기' 버튼 활성화
-                binding.btnRecommend.isEnabled = true
             }
         }
 
@@ -184,7 +193,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // 절대경로 변환
-    fun absolutelyPath(path: Uri?, context : Context): String {
+    fun absolutelyPath(path: Uri?, context: Context): String {
         var proj: Array<String> = arrayOf(MediaStore.Images.Media.DATA)
         var c: Cursor? = context.contentResolver.query(path!!, proj, null, null, null)
         var index = c?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)

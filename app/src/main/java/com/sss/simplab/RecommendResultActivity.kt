@@ -25,22 +25,18 @@ class RecommendResultActivity : AppCompatActivity() {
     }
 
     private fun initIndicator() {
-        // 3초 후 indicator 제거
-        lifecycleScope.launch {
-            delay(3000)
+        val perfume = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getParcelableExtra(MainActivity.INTENT_NAME_PERFUME, Perfume::class.java)
+        } else {
+            intent.getParcelableExtra(MainActivity.INTENT_NAME_PERFUME)
+        }
 
-            binding.indicator.visibility = View.GONE
-            binding.resultLayout.visibility = View.VISIBLE
+        binding.appTitle.text = perfume?.name
+        binding.content.text = perfume?.content
 
-            val perfume = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                intent.getParcelableExtra(MainActivity.INTENT_NAME_PERFUME, Perfume::class.java)
-            } else {
-                intent.getParcelableExtra(MainActivity.INTENT_NAME_PERFUME)
-            }
-
-            binding.appTitle.text = perfume?.name
-            binding.content.text = perfume?.content
-
+        if (perfume?.url == null) {
+            binding.resultImageCardView.visibility = View.GONE
+        } else {
             Glide.with(this@RecommendResultActivity).load(perfume?.url).into(binding.resultImageView)
         }
     }
