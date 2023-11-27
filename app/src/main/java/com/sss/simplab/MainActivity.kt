@@ -11,10 +11,12 @@ import android.content.Context
 import android.database.Cursor
 import android.provider.MediaStore
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.gson.GsonBuilder
 import com.sss.simplab.databinding.ActivityMainBinding
 import com.sss.simplab.network.Perfume
 import com.sss.simplab.network.RecommendPerfumeService
@@ -26,8 +28,6 @@ import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.create
-import retrofit2.http.Part
 import java.io.File
 
 class MainActivity : AppCompatActivity() {
@@ -55,10 +55,13 @@ class MainActivity : AppCompatActivity() {
         // '추천 받기' 버튼 클릭 시 화면 전환
         binding.btnRecommend.setOnClickListener {
             imageFile?.let {
+
+                val gson= GsonBuilder().setLenient().create()
+
                 val retrofit = Retrofit
                     .Builder()
-                    .baseUrl("http://localhost:5000")
-                    .addConverterFactory(GsonConverterFactory.create())
+                    .baseUrl("http://10.0.2.2:5000/")
+                    .addConverterFactory(GsonConverterFactory.create(gson))
                     .build()
 
                 val service = retrofit.create(RecommendPerfumeService::class.java)
@@ -70,6 +73,8 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         if (!response.isSuccessful) {
                             // 실패
+                            Log.e("테스트", "실패")
+                            return
                         }
 
                         val perfume = response.body()
@@ -79,7 +84,7 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     override fun onFailure(call: Call<Perfume>, t: Throwable) {
-
+                        Log.e("테스트", t.message.toString())
                     }
                 })
             }
@@ -138,7 +143,7 @@ class MainActivity : AppCompatActivity() {
             uri?.let {
                 val file = File(absolutelyPath(uri, this))
                 val requestFile = RequestBody.create(MediaType.parse("image/*"), file)
-                imageFile = MultipartBody.Part.createFormData("profile", file.name, requestFile)
+                imageFile = MultipartBody.Part.createFormData("image", file.name, requestFile)
 
                 // 이미지 uri 정보를 ImageView 에 반영
                 binding.uploadImageView.setImageURI(it)
