@@ -30,6 +30,9 @@ import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
+import java.io.FileOutputStream
+import java.io.InputStream
+import java.util.logging.Logger
 
 class MainActivity : AppCompatActivity() {
 
@@ -93,6 +96,7 @@ class MainActivity : AppCompatActivity() {
                         val intent = Intent(this@MainActivity, RecommendResultActivity::class.java)
                         intent.putExtra(INTENT_NAME_PERFUME, perfume)
                         startActivity(intent)
+                        binding.indicator.visibility = View.GONE
                     }
 
                     override fun onFailure(call: Call<Perfume>, t: Throwable) {
@@ -192,15 +196,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 절대경로 변환
-    fun absolutelyPath(path: Uri?, context: Context): String {
-        var proj: Array<String> = arrayOf(MediaStore.Images.Media.DATA)
-        var c: Cursor? = context.contentResolver.query(path!!, proj, null, null, null)
-        var index = c?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-        c?.moveToFirst()
+    fun absolutelyPath(uri: Uri?, context: Context): String {
+        val contentResolver = context.contentResolver
+        val inputStream: InputStream? = contentResolver.openInputStream(uri!!)
 
-        var result = c?.getString(index!!)
+        inputStream?.use { input ->
+            val file = File(context.cacheDir, "temp_file")
+            FileOutputStream(file).use { output ->
+                val buffer = ByteArray(4 * 1024) // buffer size
+                var read: Int
+                while (input.read(buffer).also { read = it } != -1) {
+                    output.write(buffer, 0, read)
+                }
+                output.flush()
+            }
+            return file.absolutePath
+        }
 
-        return result!!
+        return ""
     }
+
+//    // 절대경로 변환
+//    fun absolutelyPath(path: Uri?, context: Context): String {
+//        var proj: Array<String> = arrayOf(MediaStore.Images.Media.DATA)
+//        var c: Cursor? = context.contentResolver.query(path!!, proj, null, null, null)
+//        var index = c?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+//        c?.moveToFirst()
+//
+//
+//
+//        var result = c?.getString(index!!)  // 이 코드에서 result가 null이되는 문제 발생
+//
+//        if(result == null){
+//            Log.e("1", "asdfasdf")
+//        }
+//
+//        return result!!
+//    }
 }
